@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Planning Poker 🃏</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            background: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 { margin-bottom: 10px; }
+        #room-setup, #game-area { margin-top: 20px; }
+        .hidden { display: none; }
+        .card {
+            display: inline-block;
+            margin: 10px;
+            padding: 20px 25px;
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            cursor: pointer;
+            font-size: 20px;
+            transition: background 0.2s;
+        }
+        .card:hover { background: #e0e0e0; }
+        #votes, #result { margin-top: 20px; }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 6px;
+            background: #007BFF;
+            color: white;
+        }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+
+<h1>Planning Poker 🃏</h1>
+
+<!-- 🔹 KROK 1: Tworzenie pokoju / dołączanie -->
+<div id="room-setup">
+    <input type="text" id="roomId" placeholder="Enter room ID" />
+    <input type="text" id="playerName" placeholder="Enter your name" />
+    <button onclick="joinRoom()">Join Room</button>
+</div>
+
+<!-- 🔹 KROK 2: Gra -->
+<div id="game-area" class="hidden">
+    <h2>Room: <span id="currentRoom"></span></h2>
+    <h3>Welcome, <span id="currentPlayer"></span></h3>
+
+    <div id="cards"></div>
+
+    <div id="actions">
+        <button onclick="reveal()">Reveal</button>
+        <button onclick="reset()">Reset</button>
+    </div>
+
+    <div id="votes"></div>
+    <div id="result"></div>
+</div>
+
+<!-- ✅ STOMP + SockJS -->
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+
+<script>
+    let stompClient;
+    let roomId;
+    let playerName;
+
+    const cards = [1, 2, 4, 8, 12, 16, 20, 24, 28, null, null];
+    const labels = ["1", "2", "4", "8", "12", "16", "20", "24", "28", "I don't know", "Need a break"];
+
+    // ✅ Dołącz do pokoju
+    function joinRoom() {
+        roomId = document.getElementById("roomId").value;
+        playerName = document.getElementById("playerName").value;
+
+        if (!roomId || !playerName) {
+            alert("Enter both room ID and name");
+            return;
+        }
+
+        document.getElementById("currentRoom").textContent = roomId;
+        document.getElementById("currentPlayer").textContent = playerName;
+        document.getElementById("room-setup").classList.add("hidden");
+        document.getElementById("game-area").classList.remove("hidden");
+
+        setupWebSocket();
+        renderCards();
+    }
+
+    // ✅ Połącz się z backendem przez STOMP
+    function setupWebSocket() {
+        const socket = new SockJS('/poker');
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, frame => {
+            console.log("✅ Connected:", frame);
+
+            // 📩 Subskrypcja pokoju (aktualizacje stanu)
+            stompClient.subscribe(`/topic/room/${roomId}`, message => {
+                handleMessage(JSON.parse(message.body));
+            });
+
+            // 📊 Subskrypcja wyniku średniej
+            stompClient.subscribe(`/topic/${roomId}/result`, message => {
+                const result = JSON.parse(message.body);
+                document.getElementById("result").textContent = `Average: ${result.average.toFixed(2)}`;
+            });
+        });
+    }
+
+    // ✅ Obsługa wiadomości o stanie pokoju
+    function handleMessage(data) {
+        if (data.players) {
+            renderVotes(data.players, data.revealed);
+        }
+    }
+
+    // ✅ Wysyłanie głosu
+    function sendVote(vote) {
+        stompClient.send("/app/poker", {}, JSON.stringify({
+            type: "vote",
+            roomId: roomId,
+            player: playerName,
+            vote: vote
+        }));
+    }
+
+    // ✅ Odsłonięcie kart
+    function reveal() {
+        stompClient.send("/app/poker", {}, JSON.stringify({
+            type: "reveal",
+            roomId: roomId
+        }));
+    }
+
+    // ✅ Reset głosowania
+    function reset() {
+        stompClient.send("/app/poker", {}, JSON.stringify({
+            type: "reset",
+            roomId: roomId
+        }));
+        document.getElementById("result").textContent = "";
+    }
+
+    // 🃏 Render kart do głosowania
+    function renderCards() {
+        const cardsContainer = document.getElementById("cards");
+        cardsContainer.innerHTML = "";
+
+        cards.forEach((value, i) => {
+            const card = document.createElement("div");
+            card.className = "card";
+            card.textContent = labels[i];
+            card.onclick = () => sendVote(value);
+            cardsContainer.appendChild(card);
+        });
+    }
+
+    // 📊 Pokaż oddane głosy
+    function renderVotes(players, revealed) {
+        const votesDiv = document.getElementById("votes");
+        votesDiv.innerHTML = "<h3>Votes:</h3>";
+
+        Object.entries(players).forEach(([name, player]) => {
+            const voteDisplay = revealed
+                ? (player.vote === null ? "❓" : player.vote)
+                : "🂠";
+            votesDiv.innerHTML += `<div>${name}: ${voteDisplay}</div>`;
+        });
+    }
+</script>
+
+</body>
+</html>
