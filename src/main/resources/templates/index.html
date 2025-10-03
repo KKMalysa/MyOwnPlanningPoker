@@ -111,7 +111,6 @@
     const cards = [1, 2, 4, 8, 12, 16, 20, 24, 28, null, null];
     const labels = ["1", "2", "4", "8", "12", "16", "20", "24", "28", "I don't know", "Need a break"];
 
-    // ✅ Dołącz do pokoju
     function joinRoom() {
         roomId = document.getElementById("roomId").value;
         playerName = document.getElementById("playerName").value;
@@ -128,9 +127,18 @@
 
         setupWebSocket();
         renderCards();
+
+        // send JOIN communicate after connection
+        setTimeout(() => {
+            stompClient.send(`/app/join/${roomId}`, {}, JSON.stringify({
+                name: playerName,
+                vote: null
+            }));
+            console.log("📨 JOIN sent for player:", playerName);
+        }, 500);
     }
 
-    // ✅ Połącz się z backendem przez STOMP
+    // backend connection through STOMP
     function setupWebSocket() {
         const socket = new SockJS('/poker');
         stompClient = Stomp.over(socket);
@@ -149,7 +157,7 @@
         });
     }
 
-    // ✅ Obsługa wiadomości o stanie pokoju
+    // room status message handler
     function handleMessage(data) {
         if (data.players) {
             const participantCount = Object.keys(data.players).length;
@@ -162,7 +170,6 @@
         }
     }
 
-    // ✅ Wysyłanie głosu
     function sendVote(vote) {
         stompClient.send("/app/poker", {}, JSON.stringify({
             type: "vote",
@@ -172,7 +179,6 @@
         }));
     }
 
-    // ✅ Odsłonięcie kart
     function reveal() {
         stompClient.send("/app/poker", {}, JSON.stringify({
             type: "reveal",
@@ -180,7 +186,6 @@
         }));
     }
 
-    // ✅ Reset głosowania
     function reset() {
         stompClient.send("/app/poker", {}, JSON.stringify({
             type: "reset",
@@ -190,7 +195,7 @@
         document.getElementById("results-body").innerHTML = "";
     }
 
-    // 🃏 Render kart do głosowania
+    //  voting cards render
     function renderCards() {
         const cardsContainer = document.getElementById("cards");
         cardsContainer.innerHTML = "";
@@ -204,7 +209,7 @@
         });
     }
 
-    // 📊 Render tabeli uczestników i głosów
+    // user and votes table render
     function renderResultsTable(players, revealed) {
         const tbody = document.getElementById("results-body");
         tbody.innerHTML = "";
