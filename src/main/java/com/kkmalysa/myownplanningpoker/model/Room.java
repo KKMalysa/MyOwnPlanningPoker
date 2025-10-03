@@ -22,4 +22,9 @@ public class Room {
                 .average()
                 .orElse(0.0);
     }
+
+    public int getParticipantCount() {
+        return players.size();
+    }
+
 }
