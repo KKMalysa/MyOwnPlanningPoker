@@ -3,7 +3,10 @@ package com.kkmalysa.myownplanningpoker.controller;
 import com.kkmalysa.myownplanningpoker.dto.WebSocketMessage;
 import com.kkmalysa.myownplanningpoker.model.Player;
 import com.kkmalysa.myownplanningpoker.model.Room;
+import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
@@ -21,12 +24,18 @@ public class PokerController {
     }
 
     @MessageMapping("/poker") // frontend
-    public void handleMessage(WebSocketMessage message) {
+    public void handleMessage(WebSocketMessage message, SimpMessageHeaderAccessor headerAccessor) {
         String type = message.getType();
         String roomId = message.getRoomId();
 
         rooms.putIfAbsent(roomId, new Room(roomId, new ConcurrentHashMap<>(), false));
         Room room = rooms.get(roomId);
+
+        // registered sessions only
+        if (!room.isSessionAllowed(headerAccessor.getSessionId())) {
+            System.out.println("Unauthorized session attempt ignored");
+            return;
+        }
 
         switch (type) {
             case "vote" -> handleVote(room, message);
@@ -34,7 +43,7 @@ public class PokerController {
             case "reset" -> handleReset(room);
         }
 
-        // Aktualizuj stan pokoju po każdej akcji
+        // room status update after any action
         messagingTemplate.convertAndSend("/topic/room/" + roomId, room);
     }
 
@@ -55,4 +64,22 @@ public class PokerController {
         room.setRevealed(false);
         room.getPlayers().values().forEach(p -> p.setVote(null));
     }
+
+    @MessageMapping("/join/{roomId}")
+    @SendTo("/topic/room/{roomId}")
+    public Room join(@DestinationVariable String roomId, Player player, SimpMessageHeaderAccessor headerAccessor) {
+        Room room = rooms.computeIfAbsent(roomId, id -> new Room());
+
+        // Register safe session
+        String sessionId = headerAccessor.getSessionId();
+        room.registerSession(sessionId);
+
+        room.getPlayers().put(player.getName(), player);
+
+        System.out.println("✅ New player joined: " + player.getName() + " [sessionId=" + sessionId + "]");
+
+
+        return room;
+    }
+
 }
