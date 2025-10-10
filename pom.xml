@@ -10,9 +10,9 @@
     </parent>
     <groupId>com.KKMalysa</groupId>
     <artifactId>MyOwnPlanningPoker</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>MyOwnPlanningPoker</name>
-    <description>MyOwnPlanningPoker</description>
+    <description>Simple planning poker web application for agile teams</description>
     <url/>
     <licenses>
         <license/>
