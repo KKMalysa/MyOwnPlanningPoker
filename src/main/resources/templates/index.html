@@ -1,8 +1,17 @@
 <!DOCTYPE html>
+<!--
+  Agile Planning Tool – Frontend 🃏
+  ---------------------------------
+  A static HTML/JS client for real-time Planning Poker sessions.
+  Connects to the backend via STOMP over WebSocket (/poker) and
+  provides UI for voting, revealing, and resetting story points.
+  Author: Karol Małysa
+  Year: 2025
+-->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Planning Poker 🃏</title>
+    <title>Agile Planning Tool 🃏</title>
     <style>
         body {
             font-family: sans-serif;
@@ -50,11 +59,38 @@
         th {
             background: #e9e9e9;
         }
+        #app-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #222;
+            color: #ddd;
+            font-size: 14px;
+            text-align: center;
+            padding: 12px 20px;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.3);
+        }
+
+        #app-footer a {
+            color: #4da3ff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        #app-footer a:hover {
+            text-decoration: underline;
+        }
+
+        #app-footer p {
+            margin: 4px 0;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
 
-<h1>Planning Poker 🃏</h1>
+<h1>Agile Planning Tool 🃏</h1>
 
 <!-- 🔹 KROK 1: Tworzenie pokoju / dołączanie -->
 <div id="room-setup">
@@ -70,6 +106,10 @@
 
     <!-- ✅ Licznik uczestników -->
     <h4>Participants: <span id="participantCount">0</span></h4>
+
+    <p style="font-size: 14px; color: #666; margin-top: 8px;">
+        💡 These numbers represent <strong>Story Points</strong>, not hours.
+    </p>
 
     <!-- 📊 Wybór kart -->
     <div id="cards"></div>
@@ -231,6 +271,15 @@
         });
     }
 </script>
-
+<footer id="app-footer">
+    <p>
+        © 2025 <a href="https://www.linkedin.com/in/karol-malysa/" target="_blank">Karol Małysa</a> —
+        <a href="https://github.com/KKMalysa/MyOwnPlanningPoker" target="_blank">GitHub Repository</a>
+    </p>
+    <p>
+        This application was created solely for educational purposes as part of software development training.<br>
+        It is not intended for commercial use or production deployment.
+    </p>
+</footer>
 </body>
 </html>
